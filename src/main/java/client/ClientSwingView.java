@@ -46,24 +46,11 @@ public class ClientSwingView {
             }
         });
         frame.setVisible(true);
-        buttonDisable.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                client.disableClient();
-            }
-        });
-        buttonConnect.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                client.connectToServer();
-            }
-        });
-        textField.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                client.sendMessageOnServer(textField.getText());
-                textField.setText("");
-            }
+        buttonDisable.addActionListener(e -> client.disableClient());
+        buttonConnect.addActionListener(e -> client.connectToServer());
+        textField.addActionListener(e -> {
+            client.sendMessageOnServer(textField.getText());
+            textField.setText("");
         });
     }
 

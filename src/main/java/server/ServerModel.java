@@ -5,7 +5,6 @@ import connection.UserMetaInfo;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 public class ServerModel {
     private final Map<String, UserConnection> onlineUsersConnections = new HashMap<>();

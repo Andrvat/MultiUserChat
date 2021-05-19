@@ -3,7 +3,6 @@ package server;
 import connection.Message;
 import connection.MessageType;
 import connection.ServerObserver;
-import connection.UserMetaInfo;
 
 import javax.swing.*;
 import java.awt.*;

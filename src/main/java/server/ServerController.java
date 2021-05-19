@@ -159,7 +159,7 @@ public class ServerController {
             notifyObservers(new Message(MessageType.NOTIFY_ADD, userRecord.username()));
         }
 
-        private Message requestUsernameFromNewUser(UserConnection userConnection) throws IOException, ClassNotFoundException {
+        private Message requestUsernameFromNewUser(UserConnection userConnection) throws IOException {
             userConnection.send(new Message(MessageType.REQUEST_USERNAME));
             return userConnection.receive();
         }
@@ -172,7 +172,7 @@ public class ServerController {
             return username != null && !username.isEmpty() && !serverModel.getOnlineUsersConnections().containsKey(username);
         }
 
-        private void sendToNewUserAllOnlineUsernamesByConnection(UserConnection userConnection) throws IOException {
+        private void sendToNewUserAllOnlineUsernamesByConnection(UserConnection userConnection) {
             Set<String> listUsers = new HashSet<>(serverModel.getOnlineUsersConnections().keySet());
             userConnection.send(new Message(MessageType.NAME_ACCEPTED, listUsers));
         }
