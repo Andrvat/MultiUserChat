@@ -1,10 +1,10 @@
 package client;
 
+import javax.naming.InvalidNameException;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.util.Set;
 
 public class ClientSwingView {
     private final ClientController clientController;
@@ -184,8 +184,8 @@ public class ClientSwingView {
             } catch (Exception exception) {
                 JOptionPane.showMessageDialog(
                         clientMainFrame,
-                        "Введен неккоректный порт сервера. Попробуйте еще раз.",
-                        "Ошибка ввода порта сервера",
+                        "Invalid port entered. Try again.",
+                        "Error entering the server port",
                         JOptionPane.ERROR_MESSAGE);
             }
         }

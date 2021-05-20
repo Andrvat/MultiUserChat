@@ -15,7 +15,7 @@ public class ServerController {
     private ServerModel serverModel;
     private volatile boolean hasServerStarted = false;
 
-    private static final int PASSWORD_EXPIRATION_MILLIS_TIME = 30000;
+    private static final int PASSWORD_EXPIRATION_MILLIS_TIME = 60000;
 
     private final List<ServerObserver> observers = new ArrayList<>();
 
@@ -163,8 +163,6 @@ public class ServerController {
                             && isUsernameAvailableToAdd(userRecord.username())
                             && serverModel.isCurrentSessionPasswordCorrect(responseForPassword.getMessageText())) {
                         addNewUserToServerModel();
-                        graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
-                                "YEAH"));
                         sendToNewUserAllOnlineUsernamesByConnection(userConnection);
                         sendBroadcastMessage(new Message(MessageType.NEW_USER_ADDED, userRecord.username()));
                         break;
