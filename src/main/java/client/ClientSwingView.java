@@ -2,119 +2,195 @@ package client;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.Set;
 
 public class ClientSwingView {
-    private final Client client;
-    private JFrame frame = new JFrame("Чат");
-    private JTextArea messages = new JTextArea(30, 20);
-    private JTextArea users = new JTextArea(30, 15);
-    private JPanel panel = new JPanel();
-    private JTextField textField = new JTextField(40);
-    private JButton buttonDisable = new JButton("Отключиться");
-    private JButton buttonConnect = new JButton("Подключиться");
+    private final ClientController clientController;
 
-    public ClientSwingView(Client client) {
-        this.client = client;
+    private final JFrame clientMainFrame = new JFrame("Multi-user chat client");
+
+    private final JTextArea clientsMessagesTextArea = new JTextArea(20, 80);
+
+    private final JTextArea users = new JTextArea(30, 15);
+
+    private final JPanel interactionPanel = new JPanel();
+
+    private final JTextField inputTextField = new JTextField(40);
+
+    private final JButton disconnectButton = new JButton("Disconnect");
+
+    private final JButton connectButton = new JButton("Connect");
+
+    public ClientSwingView(ClientController clientController) {
+        this.clientController = clientController;
+        initClientGraphicInterface();
+        showInitScreen();
     }
 
-    //метод, инициализирующий графический интерфейс клиентского приложения
-    protected void initFrameClient() {
-        messages.setEditable(false);
+    private void initClientGraphicInterface() {
+        configureInitClientsMessagesTextArea();
         users.setEditable(false);
-        frame.add(new JScrollPane(messages), BorderLayout.CENTER);
-        frame.add(new JScrollPane(users), BorderLayout.EAST);
-        panel.add(textField);
-        panel.add(buttonConnect);
-        panel.add(buttonDisable);
-        frame.add(panel, BorderLayout.SOUTH);
-        frame.pack();
-        frame.setLocationRelativeTo(null); // при запуске отображает окно по центру экрана
-        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        //класс обработки события при закрытии окна приложения Сервера
-        frame.addWindowListener(new WindowAdapter() {
+        configureInitInputTextField();
+        configureInitButtonsPanel();
+        configureInitServerMainFrame();
+        addButtonClickListenerToDisconnect();
+        addButtonClickListenerToConnect();
+        addControllerForInputTextField();
+    }
+
+    private void configureInitClientsMessagesTextArea() {
+        clientsMessagesTextArea.setEditable(false);
+        clientsMessagesTextArea.setLineWrap(true);
+        Font boldFont = new Font(clientsMessagesTextArea.getFont().getName(), Font.BOLD, clientsMessagesTextArea.getFont().getSize());
+        clientsMessagesTextArea.setFont(boldFont);
+    }
+
+    private void configureInitButtonsPanel() {
+        interactionPanel.add(connectButton);
+        interactionPanel.add(disconnectButton);
+    }
+
+    private void configureInitInputTextField() {
+        interactionPanel.add(inputTextField);
+    }
+
+    private void configureInitServerMainFrame() {
+        clientMainFrame.add(new JScrollPane(clientsMessagesTextArea), BorderLayout.CENTER);
+        clientMainFrame.add(new JScrollPane(users), BorderLayout.EAST);
+        clientMainFrame.add(interactionPanel, BorderLayout.SOUTH);
+        clientMainFrame.pack();
+
+        setInitWindowSize();
+        addWindowListenerForOperateClosing();
+        setInitServerWindowInScreenCenter();
+
+    }
+
+    private void setInitWindowSize() {
+        clientMainFrame.setSize(1280, 720);
+    }
+
+    private void setInitServerWindowInScreenCenter() {
+        clientMainFrame.setLocationRelativeTo(null);
+    }
+
+    private void addWindowListenerForOperateClosing() {
+        clientMainFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        clientMainFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                if (client.isConnect()) {
-                    client.disableClient();
+                if (clientController.hasClientStarted()) {
+                    clientController.disconnectFromServer();
                 }
                 System.exit(0);
             }
         });
-        frame.setVisible(true);
-        buttonDisable.addActionListener(e -> client.disableClient());
-        buttonConnect.addActionListener(e -> client.connectToServer());
-        textField.addActionListener(e -> {
-            client.sendMessageOnServer(textField.getText());
-            textField.setText("");
+    }
+
+    private void addButtonClickListenerToDisconnect() {
+        disconnectButton.addActionListener(e -> clientController.disconnectFromServer());
+    }
+
+    private void addButtonClickListenerToConnect() {
+        connectButton.addActionListener(e -> clientController.establishConnectionToServer());
+    }
+
+    private void addControllerForInputTextField() {
+        inputTextField.addActionListener(e -> {
+            clientController.sendMessageToCommonChat(inputTextField.getText());
+            inputTextField.setText("");
         });
     }
 
-    protected void addMessage(String text) {
-        messages.append(text);
+
+    private void showInitScreen() {
+        clientMainFrame.setVisible(true);
+    }
+
+    protected void addMessageToCommonChat(String text) {
+        clientsMessagesTextArea.append(text);
     }
 
     //метод обновляющий списо имен подлючившихся пользователей
-    protected void refreshListUsers(Set<String> listUsers) {
+    protected void refreshUsernamesList(Set<String> usernamesList) {
         users.setText("");
-        if (client.isConnect()) {
+        if (clientController.hasClientStarted()) {
             StringBuilder text = new StringBuilder("Список пользователей:\n");
-            for (String user : listUsers) {
+            for (String user : usernamesList) {
                 text.append(user + "\n");
             }
             users.append(text.toString());
         }
     }
 
-    //вызывает окно для ввода адреса сервера
-    protected String getServerAddressFromOptionPane() {
+    protected String requestServerAddressByShowingInputDialog() {
         while (true) {
-            String addressServer = JOptionPane.showInputDialog(
-                    frame, "Введите адрес сервера:",
-                    "Ввод адреса сервера",
-                    JOptionPane.QUESTION_MESSAGE
-            );
-            return addressServer.trim();
-        }
-    }
-
-    //вызывает окно для ввода порта сервера
-    protected int getPortServerFromOptionPane() {
-        while (true) {
-            String port = JOptionPane.showInputDialog(
-                    frame, "Введите порт сервера:",
-                    "Ввод порта сервера",
-                    JOptionPane.QUESTION_MESSAGE
-            );
-            try {
-                return Integer.parseInt(port.trim());
-            } catch (Exception e) {
+            String serverAddress = JOptionPane.showInputDialog(
+                    clientMainFrame,
+                    "Enter the server IPv4 address:",
+                    "Entering the server address",
+                    JOptionPane.QUESTION_MESSAGE);
+            if (isSeverAddressCorrect(serverAddress)) {
+                return serverAddress;
+            } else {
                 JOptionPane.showMessageDialog(
-                        frame, "Введен неккоректный порт сервера. Попробуйте еще раз.",
-                        "Ошибка ввода порта сервера", JOptionPane.ERROR_MESSAGE
-                );
+                        clientMainFrame,
+                        "Invalid server address entered. Try again.",
+                        "Error entering the server address",
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
-    //вызывает окна для ввода имени пользователя
-    protected String getNameUser() {
-        return JOptionPane.showInputDialog(
-                frame, "Введите имя пользователя:",
-                "Ввод имени пользователя",
-                JOptionPane.QUESTION_MESSAGE
-        );
+    private boolean isSeverAddressCorrect(String serverAddress) {
+        return serverAddress != null && !serverAddress.isEmpty();
     }
 
-    //вызывает окно ошибки с заданным текстом
-    protected void errorDialogWindow(String text) {
+    protected int requestServerPortByShowingInputDialog() {
+        while (true) {
+            String port = JOptionPane.showInputDialog(
+                    clientMainFrame,
+                    "Enter the server port:",
+                    "Entering the server port",
+                    JOptionPane.QUESTION_MESSAGE);
+
+            try {
+                return Integer.parseInt(port.trim());
+            } catch (Exception exception) {
+                JOptionPane.showMessageDialog(
+                        clientMainFrame,
+                        "Введен неккоректный порт сервера. Попробуйте еще раз.",
+                        "Ошибка ввода порта сервера",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    protected String requestUsernameByShowingInputDialog() {
+        /// return user's input
+        return JOptionPane.showInputDialog(
+                clientMainFrame,
+                "Enter the user name:",
+                "Entering the user name",
+                JOptionPane.QUESTION_MESSAGE);
+    }
+
+    protected String requestPasswordByShowingInputDialog() {
+        /// return user's input
+        return JOptionPane.showInputDialog(
+                clientMainFrame,
+                "Enter the current session password:",
+                "Entering the password",
+                JOptionPane.QUESTION_MESSAGE);
+    }
+
+    protected void showErrorMessageDialog(String errorText) {
         JOptionPane.showMessageDialog(
-                frame, text,
-                "Ошибка", JOptionPane.ERROR_MESSAGE
-        );
+                clientMainFrame,
+                errorText,
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
     }
 }

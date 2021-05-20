@@ -8,6 +8,7 @@ public class ServerLauncher {
         serverController.addObserver(graphicView);
         serverController.setGraphicView(graphicView);
         serverController.setServerModel(new ServerModel());
+
         serverController.launch();
     }
 }

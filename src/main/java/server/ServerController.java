@@ -4,6 +4,7 @@ import connection.*;
 import utilities.ServeMessagesBuilder;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -13,6 +14,8 @@ public class ServerController {
     private ServerSwingView graphicView;
     private ServerModel serverModel;
     private volatile boolean hasServerStarted = false;
+
+    private static final int PASSWORD_EXPIRATION_MILLIS_TIME = 30000;
 
     private final List<ServerObserver> observers = new ArrayList<>();
 
@@ -55,6 +58,8 @@ public class ServerController {
         try {
             serverSocket = new ServerSocket(port);
             hasServerStarted = true;
+            generateNewSessionPassword();
+            new SessionPasswordUpdater().start();
             graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
                     "Server has launched on port " + port));
         } catch (Exception exception) {
@@ -78,6 +83,27 @@ public class ServerController {
             finalMessage = "Couldn't stop the server. Try again...";
         } finally {
             graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(finalMessage));
+        }
+    }
+
+    protected void generateNewSessionPassword() {
+        if (hasServerStarted) {
+            serverModel.updateCurrentSessionPassword();
+            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                    "Password for current session: " + serverModel.getCurrentSessionPassword()));
+        } else {
+            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                    "Invalid operation. Server is not running yet"));
+        }
+    }
+
+    protected String getCurrentSessionPassword() throws ConnectException {
+        if (hasServerStarted) {
+            return serverModel.getCurrentSessionPassword();
+        } else {
+            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                    "Invalid operation. Server is not running yet"));
+            throw new ConnectException();
         }
     }
 
@@ -129,16 +155,21 @@ public class ServerController {
         private void connectNewUser(UserConnection userConnection) {
             while (true) {
                 try {
-                    Message responseMessage = requestUsernameFromNewUser(userConnection);
-                    userRecord = new ChatUserRecord(userConnection, getUsernameFromResponseMessage(responseMessage));
-                    if (MessageType.isTypeUsername(responseMessage.getMessageType())
-                            && isUsernameAvailableToAdd(userRecord.username())) {
+                    Message responseForUsername = requestUsernameFromNewUser(userConnection);
+                    Message responseForPassword = requestCurrentSessionPasswordFromNewUser(userConnection);
+                    userRecord = new ChatUserRecord(userConnection, getUsernameFromResponseMessage(responseForUsername));
+                    if (MessageType.isTypeNewUsername(responseForUsername.getMessageType())
+                            && MessageType.isTypeNewPassword(responseForPassword.getMessageType())
+                            && isUsernameAvailableToAdd(userRecord.username())
+                            && serverModel.isCurrentSessionPasswordCorrect(responseForPassword.getMessageText())) {
                         addNewUserToServerModel();
+                        graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                                "YEAH"));
                         sendToNewUserAllOnlineUsernamesByConnection(userConnection);
-                        sendBroadcastMessage(new Message(MessageType.USER_ADDED, userRecord.username()));
+                        sendBroadcastMessage(new Message(MessageType.NEW_USER_ADDED, userRecord.username()));
                         break;
                     } else {
-                        userConnection.send(new Message(MessageType.NAME_USED));
+                        userConnection.send(new Message(MessageType.LOGIN_ERROR));
                     }
                 } catch (Exception exception) {
                     graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
@@ -164,6 +195,11 @@ public class ServerController {
             return userConnection.receive();
         }
 
+        private Message requestCurrentSessionPasswordFromNewUser(UserConnection userConnection) throws IOException {
+            userConnection.send(new Message(MessageType.REQUEST_PASSWORD));
+            return userConnection.receive();
+        }
+
         private String getUsernameFromResponseMessage(Message responseMessage) {
             return responseMessage.getMessageText();
         }
@@ -174,7 +210,7 @@ public class ServerController {
 
         private void sendToNewUserAllOnlineUsernamesByConnection(UserConnection userConnection) {
             Set<String> listUsers = new HashSet<>(serverModel.getOnlineUsersConnections().keySet());
-            userConnection.send(new Message(MessageType.NAME_ACCEPTED, listUsers));
+            userConnection.send(new Message(MessageType.LOGIN_ACCEPTED, listUsers));
         }
 
         private void startMessagingBetweenUsers() {
@@ -186,7 +222,7 @@ public class ServerController {
                         sendMessageFromUserToEveryone(messageFromUser);
                     }
 
-                    if (MessageType.isTypeDisableUser(messageFromUser.getMessageType())) {
+                    if (MessageType.isTypeDisconnect(messageFromUser.getMessageType())) {
                         disableExistedUserFromChat();
                         break;
                     }
@@ -206,7 +242,7 @@ public class ServerController {
         }
 
         private void disableExistedUserFromChat() throws IOException {
-            sendBroadcastMessage(new Message(MessageType.REMOVED_USER, userRecord.username()));
+            sendBroadcastMessage(new Message(MessageType.USER_DELETED, userRecord.username()));
             removeUserFromServerModel();
             userRecord.userConnection().close();
             graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
@@ -230,6 +266,22 @@ public class ServerController {
             } catch (Exception exception) {
                 graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
                         "An error occurred when sending a message from a user"));
+            }
+        }
+    }
+
+    private class SessionPasswordUpdater extends Thread {
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    Thread.sleep(PASSWORD_EXPIRATION_MILLIS_TIME);
+                    generateNewSessionPassword();
+                } catch (InterruptedException exception) {
+                    graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                            "SessionPasswordUpdater was stopped by interrupt"));
+                    break;
+                }
             }
         }
     }

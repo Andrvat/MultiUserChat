@@ -37,8 +37,8 @@ public class UserConnection implements Closeable {
 
     @Override
     public void close() throws IOException {
-        bufferedReader.close();
-        printWriter.close();
+        userSocket.shutdownOutput();
+        userSocket.shutdownInput();
         userSocket.close();
     }
 }

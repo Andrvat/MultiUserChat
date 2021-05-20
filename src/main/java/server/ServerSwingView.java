@@ -8,10 +8,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.net.ConnectException;
 
 
 public class ServerSwingView implements ServerObserver {
-    private final JFrame serverMainFrame = new JFrame("Multi-user char server");
+    private final JFrame serverMainFrame = new JFrame("Multi-user chat server");
 
     private final JTextArea serverLogsTextArea = new JTextArea(20, 80) {{
         append("Server logging messages:\n");
@@ -21,11 +22,16 @@ public class ServerSwingView implements ServerObserver {
 
     private final JButton serverStopButton = new JButton("Stop server");
 
+    private final JButton updateSessionPasswordButton = new JButton("Generate session password");
+
+    private final JButton showPasswordButton = new JButton("Show current password");
+
     private final JPanel buttonsPanel = new JPanel();
 
     private final DefaultListModel<String> usernamesListModel = new DefaultListModel<>() {{
         addElement("Online users:");
     }};
+
     private final JList<String> connectedUsernamesList = new JList<>(usernamesListModel);
 
     private final JMenuBar menuBar = new JMenuBar();
@@ -46,6 +52,8 @@ public class ServerSwingView implements ServerObserver {
         configureInitMenuBar();
         addButtonClickListenerToStartServer();
         addButtonClickListenerToStopServer();
+        addButtonClickListenerToGenerateSessionPassword();
+        addButtonClickListenerToShowPassword();
     }
 
     private void configureInitServerLogsTextArea() {
@@ -58,6 +66,8 @@ public class ServerSwingView implements ServerObserver {
     private void configureInitButtonsPanel() {
         buttonsPanel.add(serverStartButton);
         buttonsPanel.add(serverStopButton);
+        buttonsPanel.add(updateSessionPasswordButton);
+        buttonsPanel.add(showPasswordButton);
     }
 
     private void configureInitMenuBar() {
@@ -118,14 +128,18 @@ public class ServerSwingView implements ServerObserver {
         serverMainFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                int userAnswer = JOptionPane.showConfirmDialog(serverMainFrame,
+                int chosenIndex = JOptionPane.showConfirmDialog(serverMainFrame,
                         "Are you sure?",
                         "Exit",
                         JOptionPane.YES_NO_OPTION);
-                if (userAnswer == 0) {
+                if (hasOkOptionChosen(chosenIndex)) {
                     serverController.stopServer();
                     System.exit(0);
                 }
+            }
+
+            private boolean hasOkOptionChosen(int chosenIndex) {
+                return chosenIndex == 0;
             }
         });
     }
@@ -133,7 +147,7 @@ public class ServerSwingView implements ServerObserver {
     private void addButtonClickListenerToStartServer() {
         serverStartButton.addActionListener(e -> {
             try {
-                int serverPort = getServerPortFromPopupOptionPane();
+                int serverPort = requestServerPortByShowingInputDialog();
                 serverController.startServerOnPort(serverPort);
             } catch (Exception exception) {
                 JOptionPane.showMessageDialog(
@@ -149,24 +163,44 @@ public class ServerSwingView implements ServerObserver {
         serverStopButton.addActionListener(e -> serverController.stopServer());
     }
 
+    private void addButtonClickListenerToGenerateSessionPassword() {
+        updateSessionPasswordButton.addActionListener(e -> serverController.generateNewSessionPassword());
+    }
+
+    private void addButtonClickListenerToShowPassword() {
+        showPasswordButton.addActionListener(e -> {
+            try {
+                String currentPassword = serverController.getCurrentSessionPassword();
+                JOptionPane.showMessageDialog(
+                        serverMainFrame,
+                        currentPassword,
+                        "Current session password",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (ConnectException ignored) {
+            }
+        });
+    }
+
     private void showInitScreen() {
         serverMainFrame.setVisible(true);
     }
 
     public void addServiceMessageToServerLogsTextArea(String serviceMessage) {
-        serverLogsTextArea.append(serviceMessage);
+        synchronized (serverLogsTextArea) {
+            serverLogsTextArea.append(serviceMessage);
+        }
     }
 
-    private int getServerPortFromPopupOptionPane() {
+    private int requestServerPortByShowingInputDialog() {
         while (true) {
-            String stringServerPort = JOptionPane.showInputDialog(
+            String port = JOptionPane.showInputDialog(
                     serverMainFrame,
                     "Enter the server port number:",
                     "Entering the server port",
                     JOptionPane.QUESTION_MESSAGE);
 
             try {
-                return Integer.parseInt(stringServerPort.trim());
+                return Integer.parseInt(port.trim());
             } catch (Exception exception) {
                 JOptionPane.showMessageDialog(
                         serverMainFrame,
