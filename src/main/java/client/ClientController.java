@@ -1,6 +1,7 @@
 package client;
 
 import connection.*;
+import utilities.FormatMessagesBuilder;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -42,7 +43,8 @@ public class ClientController {
                 Socket socket = new Socket(serverAddress, port);
                 userConnection = new UserConnection(socket);
                 hasClientConnectedToServer = true;
-                graphicView.addMessageToCommonChat("You have connected to the server");
+                graphicView.addMessageToCommonChat(FormatMessagesBuilder.buildChatTextAreaServiceMessage(
+                        "You have connected to the server"));
             } catch (Exception exception) {
                 graphicView.showErrorMessageDialog(
                         "An error has occurred! " +
@@ -69,12 +71,13 @@ public class ClientController {
                 }
 
                 if (MessageType.isTypeLoginError(serverResponse.getMessageType())) {
-                    graphicView.showErrorMessageDialog("This name is already in use, enter another one...");
+                    graphicView.showErrorMessageDialog("You entered an incorrect username or password, enter other ones...");
                     continue;
                 }
 
                 if (MessageType.isTypeLoginAccepted(serverResponse.getMessageType())) {
-                    graphicView.addMessageToCommonChat("Your name is accepted! Welcome to common chat!");
+                    graphicView.addMessageToCommonChat(FormatMessagesBuilder.buildChatTextAreaServiceMessage(
+                            "Your name is accepted! Welcome to common chat!"));
                     clientModel.setConnectedUsernames(serverResponse.getConnectedUsernames());
                     break;
                 }
@@ -113,19 +116,23 @@ public class ClientController {
                 }
 
                 if (MessageType.isTypeNewUserAdded(serverResponse.getMessageType())) {
-                    clientModel.addUserToConnectedOnes(serverResponse.getMessageText());
-                    graphicView.refreshUsernamesList(clientModel.getConnectedUsernames());
-                    graphicView.addMessageToCommonChat("The user " + serverResponse.getMessageText() + " joined to the chat");
+                    String usernameForAdd = serverResponse.getMessageText();
+                    clientModel.addUserToConnectedOnes(usernameForAdd);
+                    graphicView.addNewUserTpConnectedUsernamesList(usernameForAdd);
+                    graphicView.addMessageToCommonChat(FormatMessagesBuilder.buildChatTextAreaServiceMessage(
+                            "The user " + usernameForAdd + " joined to the chat"));
                 }
 
                 if (MessageType.isTypeUserDeleted(serverResponse.getMessageType())) {
-                    clientModel.removeUserFromConnectedOnes(serverResponse.getMessageText());
-                    graphicView.refreshUsernamesList(clientModel.getConnectedUsernames());
-                    graphicView.addMessageToCommonChat("The user " + serverResponse.getMessageText() + " left from the chat");
+                    String usernameForDelete = serverResponse.getMessageText();
+                    clientModel.removeUserFromConnectedOnes(usernameForDelete);
+                    graphicView.removeNewUserTpConnectedUsernamesList(usernameForDelete);
+                    graphicView.addMessageToCommonChat(FormatMessagesBuilder.buildChatTextAreaServiceMessage(
+                            "The user " + usernameForDelete + " left from the chat"));
                 }
             } catch (Exception exception) {
                 graphicView.showErrorMessageDialog("Error when receiving a message from the server");
-                graphicView.refreshUsernamesList(clientModel.getConnectedUsernames());
+                graphicView.clearUsernamesList();
                 hasClientConnectedToServer = false;
                 break;
             }
@@ -137,8 +144,8 @@ public class ClientController {
             if (hasClientConnectedToServer) {
                 userConnection.send(new Message(MessageType.DISCONNECT));
                 clientModel.getConnectedUsernames().clear();
+                graphicView.clearUsernamesList();
                 hasClientConnectedToServer = false;
-                graphicView.refreshUsernamesList(clientModel.getConnectedUsernames());
             } else {
                 graphicView.showErrorMessageDialog("You are already disabled");
             }

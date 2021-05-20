@@ -3,17 +3,17 @@ package connection;
 import java.util.UUID;
 
 public class Password {
-    private String password;
+    private String passwordValue;
 
     public Password() {
-        password = UUID.randomUUID().toString();
+        passwordValue = UUID.randomUUID().toString();
     }
 
     public String getValue() {
-        return password;
+        return passwordValue;
     }
 
     public void setValue(String password) {
-        this.password = password;
+        this.passwordValue = password;
     }
 }

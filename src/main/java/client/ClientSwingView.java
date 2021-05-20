@@ -13,7 +13,11 @@ public class ClientSwingView {
 
     private final JTextArea clientsMessagesTextArea = new JTextArea(20, 80);
 
-    private final JTextArea users = new JTextArea(30, 15);
+    private final DefaultListModel<String> usernamesListModel = new DefaultListModel<>() {{
+        addElement("Online users:");
+    }};
+
+    private final JList<String> connectedUsernamesList = new JList<>(usernamesListModel);
 
     private final JPanel interactionPanel = new JPanel();
 
@@ -31,10 +35,10 @@ public class ClientSwingView {
 
     private void initClientGraphicInterface() {
         configureInitClientsMessagesTextArea();
-        users.setEditable(false);
         configureInitInputTextField();
         configureInitButtonsPanel();
         configureInitServerMainFrame();
+        configureUsernamesList();
         addButtonClickListenerToDisconnect();
         addButtonClickListenerToConnect();
         addControllerForInputTextField();
@@ -52,15 +56,23 @@ public class ClientSwingView {
         interactionPanel.add(disconnectButton);
     }
 
+    private void configureUsernamesList() {
+        connectedUsernamesList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    }
+
     private void configureInitInputTextField() {
         interactionPanel.add(inputTextField);
     }
 
     private void configureInitServerMainFrame() {
         clientMainFrame.add(new JScrollPane(clientsMessagesTextArea), BorderLayout.CENTER);
-        clientMainFrame.add(new JScrollPane(users), BorderLayout.EAST);
         clientMainFrame.add(interactionPanel, BorderLayout.SOUTH);
         clientMainFrame.pack();
+        clientMainFrame.add(new JScrollPane(connectedUsernamesList) {{
+            Dimension dimension = connectedUsernamesList.getPreferredSize();
+            dimension.width = 250;
+            setPreferredSize(dimension);
+        }}, BorderLayout.EAST);
 
         setInitWindowSize();
         addWindowListenerForOperateClosing();
@@ -81,10 +93,20 @@ public class ClientSwingView {
         clientMainFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                if (clientController.hasClientStarted()) {
-                    clientController.disconnectFromServer();
+                int chosenIndex = JOptionPane.showConfirmDialog(clientMainFrame,
+                        "Are you sure?",
+                        "Exit",
+                        JOptionPane.YES_NO_OPTION);
+                if (hasOkOptionChosen(chosenIndex)) {
+                    if (clientController.hasClientStarted()) {
+                        clientController.disconnectFromServer();
+                    }
+                    System.exit(0);
                 }
-                System.exit(0);
+            }
+
+            private boolean hasOkOptionChosen(int chosenIndex) {
+                return chosenIndex == 0;
             }
         });
     }
@@ -110,19 +132,20 @@ public class ClientSwingView {
     }
 
     protected void addMessageToCommonChat(String text) {
-        clientsMessagesTextArea.append(text);
+        clientsMessagesTextArea.append(text + "\n");
     }
 
-    //метод обновляющий списо имен подлючившихся пользователей
-    protected void refreshUsernamesList(Set<String> usernamesList) {
-        users.setText("");
-        if (clientController.hasClientStarted()) {
-            StringBuilder text = new StringBuilder("Список пользователей:\n");
-            for (String user : usernamesList) {
-                text.append(user + "\n");
-            }
-            users.append(text.toString());
-        }
+    protected void clearUsernamesList() {
+        usernamesListModel.clear();
+        usernamesListModel.addElement("Online users:");
+    }
+
+    protected void addNewUserTpConnectedUsernamesList(String username) {
+        usernamesListModel.addElement(username);
+    }
+
+    protected void removeNewUserTpConnectedUsernamesList(String username) {
+        usernamesListModel.removeElement(username);
     }
 
     protected String requestServerAddressByShowingInputDialog() {

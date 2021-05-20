@@ -1,7 +1,7 @@
 package connection;
 
 import lombok.Builder;
-import utilities.ServeMessagesBuilder;
+import utilities.FormatMessagesBuilder;
 
 @Builder
 public class UserMetaInfo {
@@ -14,7 +14,7 @@ public class UserMetaInfo {
     private int allSentMessagesNumber;
 
     public void updateLastMessageTime() {
-        lastMessageTime = ServeMessagesBuilder.buildDateNow();
+        lastMessageTime = FormatMessagesBuilder.buildDateNow();
         allSentMessagesNumber++;
     }
 

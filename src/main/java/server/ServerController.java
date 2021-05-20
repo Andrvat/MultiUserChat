@@ -1,7 +1,7 @@
 package server;
 
 import connection.*;
-import utilities.ServeMessagesBuilder;
+import utilities.FormatMessagesBuilder;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -60,10 +60,10 @@ public class ServerController {
             hasServerStarted = true;
             generateNewSessionPassword();
             new SessionPasswordUpdater().start();
-            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+            graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                     "Server has launched on port " + port));
         } catch (Exception exception) {
-            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+            graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                     "Couldn't launch the server"));
             throw exception;
         }
@@ -82,17 +82,17 @@ public class ServerController {
         } catch (Exception exception) {
             finalMessage = "Couldn't stop the server. Try again...";
         } finally {
-            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(finalMessage));
+            graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(finalMessage));
         }
     }
 
     protected void generateNewSessionPassword() {
         if (hasServerStarted) {
             serverModel.updateCurrentSessionPassword();
-            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+            graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                     "Password for current session: " + serverModel.getCurrentSessionPassword()));
         } else {
-            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+            graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                     "Invalid operation. Server is not running yet"));
         }
     }
@@ -101,7 +101,7 @@ public class ServerController {
         if (hasServerStarted) {
             return serverModel.getCurrentSessionPassword();
         } else {
-            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+            graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                     "Invalid operation. Server is not running yet"));
             throw new ConnectException();
         }
@@ -126,7 +126,7 @@ public class ServerController {
                 Socket socket = serverSocket.accept();
                 new UserConnectionHandler(socket).start();
             } catch (Exception e) {
-                graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                         "Connection to the server is lost"));
                 break;
             }
@@ -138,7 +138,7 @@ public class ServerController {
             try {
                 userConnection.send(message);
             } catch (Exception e) {
-                graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                         "Error sending a message to all users"));
             }
         }
@@ -163,7 +163,7 @@ public class ServerController {
                             && isUsernameAvailableToAdd(userRecord.username())
                             && serverModel.isCurrentSessionPasswordCorrect(responseForPassword.getMessageText())) {
                         addNewUserToServerModel();
-                        graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                        graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                                 "YEAH"));
                         sendToNewUserAllOnlineUsernamesByConnection(userConnection);
                         sendBroadcastMessage(new Message(MessageType.NEW_USER_ADDED, userRecord.username()));
@@ -172,7 +172,7 @@ public class ServerController {
                         userConnection.send(new Message(MessageType.LOGIN_ERROR));
                     }
                 } catch (Exception exception) {
-                    graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                    graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                             "An error occurred when connecting a new user"));
                 }
             }
@@ -182,10 +182,10 @@ public class ServerController {
             serverModel.addNewUserConnection(userRecord.username(), userRecord.userConnection());
             serverModel.addNewUserMetaInfo(userRecord.username(),
                     UserMetaInfo.builder()
-                            .firstConnectionTime(ServeMessagesBuilder.buildDateNow())
+                            .firstConnectionTime(FormatMessagesBuilder.buildDateNow())
                             .username(userRecord.username())
                             .allSentMessagesNumber(0)
-                            .lastMessageTime(ServeMessagesBuilder.buildDateNow())
+                            .lastMessageTime(FormatMessagesBuilder.buildDateNow())
                             .build());
             notifyObservers(new Message(MessageType.NOTIFY_ADD, userRecord.username()));
         }
@@ -227,7 +227,7 @@ public class ServerController {
                         break;
                     }
                 } catch (Exception exception) {
-                    graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                    graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                             "An error occurred when sending a message from user " + userRecord.username() + " with address " + userSocket.getRemoteSocketAddress()));
                     removeUserFromServerModel();
                     break;
@@ -236,7 +236,7 @@ public class ServerController {
         }
 
         private void sendMessageFromUserToEveryone(Message message) {
-            String textMessage = ServeMessagesBuilder.buildChatTextAreaMessage(userRecord.username(), message.getMessageText());
+            String textMessage = FormatMessagesBuilder.buildChatTextAreaUserMessage(userRecord.username(), message.getMessageText());
             sendBroadcastMessage(new Message(MessageType.TEXT_MESSAGE, textMessage));
             serverModel.getUserMetaInfoByUsername(userRecord.username()).updateLastMessageTime();
         }
@@ -245,7 +245,7 @@ public class ServerController {
             sendBroadcastMessage(new Message(MessageType.USER_DELETED, userRecord.username()));
             removeUserFromServerModel();
             userRecord.userConnection().close();
-            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+            graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                     "The user with remote address " + userSocket.getRemoteSocketAddress() + " has disconnected"));
         }
 
@@ -257,14 +257,14 @@ public class ServerController {
 
         @Override
         public void run() {
-            graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+            graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                     "A new user connected with a remote socket " + userSocket.getRemoteSocketAddress().toString()));
             try {
                 UserConnection userConnection = new UserConnection(userSocket);
                 connectNewUser(userConnection);
                 startMessagingBetweenUsers();
             } catch (Exception exception) {
-                graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                         "An error occurred when sending a message from a user"));
             }
         }
@@ -278,7 +278,7 @@ public class ServerController {
                     Thread.sleep(PASSWORD_EXPIRATION_MILLIS_TIME);
                     generateNewSessionPassword();
                 } catch (InterruptedException exception) {
-                    graphicView.addServiceMessageToServerLogsTextArea(ServeMessagesBuilder.buildMessageWithDateNow(
+                    graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                             "SessionPasswordUpdater was stopped by interrupt"));
                     break;
                 }
