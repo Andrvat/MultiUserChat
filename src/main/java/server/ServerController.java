@@ -15,7 +15,7 @@ public class ServerController {
     private ServerModel serverModel;
     private volatile boolean hasServerStarted = false;
 
-    private static final int PASSWORD_EXPIRATION_MILLIS_TIME = 60000;
+    private static final int PASSWORD_EXPIRATION_MILLIS_TIME = 120000;
 
     private final List<ServerObserver> observers = new ArrayList<>();
 
@@ -40,6 +40,10 @@ public class ServerController {
         for (ServerObserver observer : observers) {
             observer.update(message);
         }
+    }
+
+    public boolean hasServerStarted() {
+        return hasServerStarted;
     }
 
     public ServerModel getServerModel() {
@@ -152,7 +156,7 @@ public class ServerController {
             this.userSocket = userSocket;
         }
 
-        private void connectNewUser(UserConnection userConnection) {
+        private void connectNewUser(UserConnection userConnection) throws IOException {
             while (true) {
                 try {
                     Message responseForUsername = requestUsernameFromNewUser(userConnection);
@@ -170,8 +174,11 @@ public class ServerController {
                         userConnection.send(new Message(MessageType.LOGIN_ERROR));
                     }
                 } catch (Exception exception) {
+                    exception.printStackTrace();
                     graphicView.addServiceMessageToServerLogsTextArea(FormatMessagesBuilder.buildMessageWithDateNow(
                             "An error occurred when connecting a new user"));
+                    removeUserFromServerModel();
+                    throw exception;
                 }
             }
         }

@@ -1,9 +1,14 @@
 package client;
 
 import connection.*;
+import org.apache.commons.validator.routines.InetAddressValidator;
 import utilities.FormatMessagesBuilder;
 
+import javax.naming.InvalidNameException;
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 public class ClientController {
@@ -40,11 +45,12 @@ public class ClientController {
                 String serverAddress = graphicView.requestServerAddressByShowingInputDialog();
                 int port = graphicView.requestServerPortByShowingInputDialog();
 
-                Socket socket = new Socket(serverAddress, port);
-                userConnection = new UserConnection(socket);
+                createConnectionToServer(serverAddress, port);
                 hasClientConnectedToServer = true;
                 graphicView.addMessageToCommonChat(FormatMessagesBuilder.buildChatTextAreaServiceMessage(
                         "You have connected to the server"));
+            } catch (InvalidNameException ignored) {
+                ignored.printStackTrace();
             } catch (Exception exception) {
                 graphicView.showErrorMessageDialog(
                         "An error has occurred! " +
@@ -54,6 +60,24 @@ public class ClientController {
             graphicView.showErrorMessageDialog("You are already connected!");
         }
     }
+
+    private void createConnectionToServer(String serverAddress, int serverPort) throws IOException {
+        if (isValidServerIPv4Address(serverAddress) && isValidServerPort(serverPort)) {
+            Socket socket = new Socket(serverAddress, serverPort);
+            userConnection = new UserConnection(socket);
+        } else {
+            throw new IOException();
+        }
+    }
+
+    private boolean isValidServerPort(int port) {
+        return 0 <= port && port <= 65535;
+    }
+
+    private boolean isValidServerIPv4Address(String address) {
+        return InetAddressValidator.getInstance().isValidInet4Address(address) || address.equals("localhost");
+    }
+
 
     protected void registerOnServer() {
         while (true) {
@@ -82,17 +106,18 @@ public class ClientController {
                     break;
                 }
 
-            } catch (Exception exception) {
-                graphicView.showErrorMessageDialog(
-                        "An error occurred while registering. Try reconnecting...");
-                try {
-                    userConnection.close();
-                    hasClientConnectedToServer = false;
-                    break;
-                } catch (IOException ioException) {
-                    graphicView.showErrorMessageDialog(
-                            "Error when closing the connection");
+            } catch (InvalidNameException exception) {
+                if (hasClientConnectedToServer) {
+                    disconnectFromServer();
                 }
+                break;
+            } catch (Exception exception) {
+                if (hasClientConnectedToServer) {
+                    graphicView.showErrorMessageDialog(
+                            "An error occurred while registering. Try reconnecting...");
+                    disconnectFromServer();
+                }
+                break;
             }
 
         }
@@ -118,7 +143,7 @@ public class ClientController {
                 if (MessageType.isTypeNewUserAdded(serverResponse.getMessageType())) {
                     String usernameForAdd = serverResponse.getMessageText();
                     clientModel.addUserToConnectedOnes(usernameForAdd);
-                    graphicView.addNewUserTpConnectedUsernamesList(usernameForAdd);
+                    graphicView.setALlOnlineUsersToConnectedUsernamesList(clientModel.getConnectedUsernames());
                     graphicView.addMessageToCommonChat(FormatMessagesBuilder.buildChatTextAreaServiceMessage(
                             "The user " + usernameForAdd + " joined to the chat"));
                 }
@@ -126,14 +151,15 @@ public class ClientController {
                 if (MessageType.isTypeUserDeleted(serverResponse.getMessageType())) {
                     String usernameForDelete = serverResponse.getMessageText();
                     clientModel.removeUserFromConnectedOnes(usernameForDelete);
-                    graphicView.removeNewUserTpConnectedUsernamesList(usernameForDelete);
+                    graphicView.removeNewUserFromConnectedUsernamesList(usernameForDelete);
                     graphicView.addMessageToCommonChat(FormatMessagesBuilder.buildChatTextAreaServiceMessage(
                             "The user " + usernameForDelete + " left from the chat"));
                 }
             } catch (Exception exception) {
-                graphicView.showErrorMessageDialog("Error when receiving a message from the server");
-                graphicView.clearUsernamesList();
-                hasClientConnectedToServer = false;
+                if (hasClientConnectedToServer) {
+                    graphicView.showErrorMessageDialog("Error when receiving a message from the server");
+                    disconnectFromServer();
+                }
                 break;
             }
         }
@@ -145,6 +171,7 @@ public class ClientController {
                 userConnection.send(new Message(MessageType.DISCONNECT));
                 clientModel.getConnectedUsernames().clear();
                 graphicView.clearUsernamesList();
+                userConnection.close();
                 hasClientConnectedToServer = false;
             } else {
                 graphicView.showErrorMessageDialog("You are already disabled");

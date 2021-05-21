@@ -5,6 +5,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.Set;
 
 public class ClientSwingView {
     private final ClientController clientController;
@@ -136,48 +137,58 @@ public class ClientSwingView {
     }
 
     protected void clearUsernamesList() {
+        clearInfoAboutUsersFromUsernamesListModel();
+    }
+
+    protected void setALlOnlineUsersToConnectedUsernamesList(Set<String> onlineUsers) {
+        clearInfoAboutUsersFromUsernamesListModel();
+        usernamesListModel.addAll(onlineUsers);
+    }
+
+    private void clearInfoAboutUsersFromUsernamesListModel() {
         usernamesListModel.clear();
         usernamesListModel.addElement("Online users:");
     }
 
-    protected void addNewUserTpConnectedUsernamesList(String username) {
-        usernamesListModel.addElement(username);
-    }
-
-    protected void removeNewUserTpConnectedUsernamesList(String username) {
+    protected void removeNewUserFromConnectedUsernamesList(String username) {
         usernamesListModel.removeElement(username);
     }
 
-    protected String requestServerAddressByShowingInputDialog() {
+    protected String requestServerAddressByShowingInputDialog() throws InvalidNameException {
         while (true) {
             String serverAddress = JOptionPane.showInputDialog(
                     clientMainFrame,
                     "Enter the server IPv4 address:",
                     "Entering the server address",
                     JOptionPane.QUESTION_MESSAGE);
-            if (isSeverAddressCorrect(serverAddress)) {
-                return serverAddress;
-            } else {
+            if (hasCancelButtonSelectedInWindowDialog(serverAddress)) {
+                throw new InvalidNameException();
+            }
+
+            if (serverAddress.isEmpty()) {
                 JOptionPane.showMessageDialog(
                         clientMainFrame,
                         "Invalid server address entered. Try again.",
                         "Error entering the server address",
                         JOptionPane.ERROR_MESSAGE);
+                continue;
             }
+
+            return serverAddress;
         }
     }
 
-    private boolean isSeverAddressCorrect(String serverAddress) {
-        return serverAddress != null && !serverAddress.isEmpty();
-    }
-
-    protected int requestServerPortByShowingInputDialog() {
+    protected int requestServerPortByShowingInputDialog() throws InvalidNameException {
         while (true) {
             String port = JOptionPane.showInputDialog(
                     clientMainFrame,
                     "Enter the server port:",
                     "Entering the server port",
                     JOptionPane.QUESTION_MESSAGE);
+
+            if (hasCancelButtonSelectedInWindowDialog(port)) {
+                throw new InvalidNameException();
+            }
 
             try {
                 return Integer.parseInt(port.trim());
@@ -191,22 +202,56 @@ public class ClientSwingView {
         }
     }
 
-    protected String requestUsernameByShowingInputDialog() {
-        /// return user's input
-        return JOptionPane.showInputDialog(
-                clientMainFrame,
-                "Enter the user name:",
-                "Entering the user name",
-                JOptionPane.QUESTION_MESSAGE);
+    protected String requestUsernameByShowingInputDialog() throws InvalidNameException {
+        while (true) {
+            String username = JOptionPane.showInputDialog(
+                    clientMainFrame,
+                    "Enter the user name:",
+                    "Entering the user name",
+                    JOptionPane.QUESTION_MESSAGE);
+            if (hasCancelButtonSelectedInWindowDialog(username)) {
+                throw new InvalidNameException();
+            }
+
+            if (username.isEmpty()) {
+                JOptionPane.showMessageDialog(
+                        clientMainFrame,
+                        "Invalid username entered. Try again.",
+                        "Error entering the username",
+                        JOptionPane.ERROR_MESSAGE);
+                continue;
+            }
+
+            return username;
+        }
     }
 
-    protected String requestPasswordByShowingInputDialog() {
-        /// return user's input
-        return JOptionPane.showInputDialog(
-                clientMainFrame,
-                "Enter the current session password:",
-                "Entering the password",
-                JOptionPane.QUESTION_MESSAGE);
+    private boolean hasCancelButtonSelectedInWindowDialog(String input) {
+        return input == null;
+    }
+
+    protected String requestPasswordByShowingInputDialog() throws InvalidNameException {
+        while (true) {
+            String password = JOptionPane.showInputDialog(
+                    clientMainFrame,
+                    "Enter the current session password:",
+                    "Entering the password",
+                    JOptionPane.QUESTION_MESSAGE);
+            if (hasCancelButtonSelectedInWindowDialog(password)) {
+                throw new InvalidNameException();
+            }
+
+            if (password.isEmpty()) {
+                JOptionPane.showMessageDialog(
+                        clientMainFrame,
+                        "Invalid password entered. Try again.",
+                        "Error entering the password",
+                        JOptionPane.ERROR_MESSAGE);
+                continue;
+            }
+
+            return password;
+        }
     }
 
     protected void showErrorMessageDialog(String errorText) {

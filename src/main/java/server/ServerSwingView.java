@@ -5,6 +5,8 @@ import connection.MessageType;
 import connection.ServerObserver;
 
 import javax.swing.*;
+import javax.swing.event.MenuEvent;
+import javax.swing.event.MenuListener;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -87,11 +89,15 @@ public class ServerSwingView implements ServerObserver {
     }
 
     private JMenu getBuiltHelpMenuBar() {
-        JMenu helpMenu = new JMenu("Help");
+        JMenu helpMenu = new JMenu("Notes");
         JMenuItem itemAbout = new JMenuItem("About...");
         itemAbout.addActionListener(e -> JOptionPane.showMessageDialog(
                 serverMainFrame,
-                "Andrvat",
+                """
+                        - Andrvat
+                        - Canteen NSU
+                        - Sometimes motivation
+                        """,
                 "Information about developers",
                 JOptionPane.INFORMATION_MESSAGE));
         helpMenu.add(itemAbout);
@@ -125,6 +131,8 @@ public class ServerSwingView implements ServerObserver {
 
     private void addWindowListenerForOperateClosing() {
         serverMainFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+
+        ServerObserver observerReference = this;
         serverMainFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -134,6 +142,7 @@ public class ServerSwingView implements ServerObserver {
                         JOptionPane.YES_NO_OPTION);
                 if (hasOkOptionChosen(chosenIndex)) {
                     serverController.stopServer();
+                    serverController.removeObserver(observerReference);
                     System.exit(0);
                 }
             }
@@ -147,6 +156,14 @@ public class ServerSwingView implements ServerObserver {
     private void addButtonClickListenerToStartServer() {
         serverStartButton.addActionListener(e -> {
             try {
+                if (serverController.hasServerStarted()) {
+                    JOptionPane.showMessageDialog(
+                            serverMainFrame,
+                            "The server is still running. Stop the server and try again...",
+                            "Server launching error",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
                 int serverPort = requestServerPortByShowingInputDialog();
                 serverController.startServerOnPort(serverPort);
             } catch (Exception exception) {
